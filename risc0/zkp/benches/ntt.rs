@@ -1,15 +1,20 @@
+use criterion::BatchSize;
 use criterion::{criterion_group, criterion_main, Criterion};
+use rand::thread_rng;
 use risc0_core::field::{baby_bear::BabyBearElem, Elem};
 use risc0_zkp::core::hash::poseidon2::Poseidon2HashSuite;
-use rand::thread_rng;
-use std::any::type_name;
-use criterion::BatchSize;
 use risc0_zkp::hal::cpu::CpuHal;
 #[cfg(feature = "cuda")]
 use risc0_zkp::hal::cuda::CudaHalPoseidon2;
 use risc0_zkp::hal::Hal;
+use std::any::type_name;
 
-fn bench_ntt_internal<H: Hal<Elem=BabyBearElem>>(c: &mut Criterion, h: H, log_n: usize, batch: usize) {
+fn bench_ntt_internal<H: Hal<Elem = BabyBearElem>>(
+    c: &mut Criterion,
+    h: H,
+    log_n: usize,
+    batch: usize,
+) {
     let rng = &mut thread_rng();
     let polys = (0..(1 << log_n) * batch)
         .map(|_| BabyBearElem::random(rng))
@@ -19,8 +24,12 @@ fn bench_ntt_internal<H: Hal<Elem=BabyBearElem>>(c: &mut Criterion, h: H, log_n:
         &format!("ntt_{}_{}_{}", type_name::<H>(), log_n, batch),
         |b| {
             b.iter_batched(
-                || h.copy_from_elem("a", &polys),
-                |buf| h.batch_interpolate_ntt(&buf, batch),
+                //|| h.copy_from_elem("a", &polys),
+                || {},
+                |_| {
+                    let buf = h.copy_from_elem("a", &polys);
+                    h.batch_interpolate_ntt(&buf, batch);
+                },
                 BatchSize::SmallInput,
             );
         },
